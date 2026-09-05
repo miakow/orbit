@@ -1,0 +1,936 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ORBIT — OSINT Visualizer</title>
+
+    <link rel="stylesheet" href="e.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+
+<body>
+
+<!-- ==============================
+     START SCREEN
+================================ -->
+
+<section id="startScreen">
+
+    <div class="start-container">
+
+        <header class="brand">
+            <div class="logo">O</div>
+
+            <div>
+                <div class="brand-name">ORBIT</div>
+                <div class="brand-sub">
+                    OSINT VISUAL INTELLIGENCE
+                </div>
+            </div>
+        </header>
+
+
+        <main class="hero">
+
+            <div class="eyebrow">
+                OSINT WORKSPACE · 2026
+            </div>
+
+            <h1>
+                See the
+                <span>connections.</span>
+                <br>
+                Understand the picture.
+            </h1>
+
+            <p>
+                Визуальный рабочий стол для анализа
+                цифровых сущностей, связей и источников.
+                Исследования сохраняются локально.
+            </p>
+
+            <div class="start-actions">
+
+                <button
+                    class="btn btn-primary"
+                    onclick="newProject()">
+                    <span>＋</span>
+                    Новый проект
+                </button>
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="document.getElementById('importFile').click()">
+                    ↥
+                    Импорт JSON
+                </button>
+
+                <input
+                    id="importFile"
+                    type="file"
+                    accept=".json"
+                    hidden
+                    onchange="importProject(event)"
+                >
+
+            </div>
+
+        </main>
+
+
+        <section class="saves-section">
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Сохранения</h2>
+                    <span>
+                        Ваши исследования
+                    </span>
+                </div>
+
+                <span id="saveCount">
+                    0 проектов
+                </span>
+
+            </div>
+
+            <div
+                id="saveGrid"
+                class="save-grid">
+            </div>
+
+        </section>
+
+    </div>
+
+</section>
+
+
+<!-- ==============================
+     APPLICATION
+================================ -->
+
+<div id="app">
+
+
+    <!-- TOPBAR -->
+
+    <header class="topbar">
+
+        <div class="app-logo">
+            O
+        </div>
+
+        <div class="project-info">
+
+            <strong id="projectTitle">
+                Untitled Investigation
+            </strong>
+
+            <small id="projectMeta">
+                0 entities · 0 connections
+            </small>
+
+        </div>
+
+
+        <div class="search-box">
+
+            <span>⌕</span>
+
+            <input
+                id="searchInput"
+                type="text"
+                placeholder="Поиск по графу..."
+                oninput="searchGraph(this.value)"
+            >
+
+        </div>
+
+
+        <div class="top-space"></div>
+
+
+        <div class="save-status">
+
+            <i></i>
+
+            <span>
+                Auto-saved
+            </span>
+
+        </div>
+
+
+        <button
+            class="top-btn"
+            title="Сохранить"
+            onclick="saveProject()">
+            ↓
+        </button>
+
+        <button
+            class="top-btn"
+            title="Цвет темы"
+            onclick="toggleThemePanel()">
+            ◐
+        </button>
+
+        <button
+            class="top-btn"
+            title="Главное меню"
+            onclick="backHome()">
+            ×
+        </button>
+
+    </header>
+
+
+    <!-- LEFT TOOLBAR -->
+
+    <aside class="left-toolbar">
+
+        <button
+            class="tool active"
+            title="Выбор"
+            onclick="setTool('select', this)">
+            ↖
+        </button>
+
+        <button
+            class="tool"
+            title="Добавить сущность"
+            onclick="setTool('node', this)">
+            ＋
+        </button>
+
+        <button
+            class="tool"
+            title="Создать связь"
+            onclick="setTool('edge', this)">
+            ↗
+        </button>
+
+
+        <div class="toolbar-line"></div>
+
+
+        <button
+            class="tool"
+            title="Приблизить"
+            onclick="zoom(1.15)">
+            ＋
+        </button>
+
+        <button
+            class="tool"
+            title="Отдалить"
+            onclick="zoom(.87)">
+            −
+        </button>
+
+        <button
+            class="tool"
+            title="Центрировать"
+            onclick="centerGraph()">
+            ⊙
+        </button>
+
+
+        <button
+            class="tool"
+            title="Автораскладка графа"
+            onclick="autoLayout()">
+            ✦
+        </button>
+
+        <div class="orbit-extra-tools">
+
+            <button
+                class="tool"
+                title="Карта мира"
+                onclick="toggleWorldMap()">
+                ◎
+            </button>
+
+            <button
+                class="tool"
+                title="Временная почта"
+                onclick="toggleTempMail()">
+                @
+            </button>
+
+            <button
+                class="tool"
+                title="Аналитика"
+                onclick="toggleAnalysis()">
+                ◈
+            </button>
+
+            <button
+                class="tool"
+                title="Timeline"
+                onclick="toggleTimeline()">
+                ◷
+            </button>
+
+        </div>
+
+
+        <div class="toolbar-bottom">
+
+            <button
+                class="tool"
+                title="Экспорт JSON"
+                onclick="exportProject()">
+                ⇩
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- WORKSPACE -->
+
+    <main id="workspace">
+
+        <canvas id="graph"></canvas>
+
+        <div class="canvas-hint">
+            Drag — перемещение · Wheel — zoom · Double click — inspect
+        </div>
+
+    </main>
+
+
+    <!-- RIGHT INSPECTOR -->
+
+    <aside class="inspector">
+
+        <div class="inspector-header">
+
+            <div>
+                <span class="inspector-kicker">
+                    OBJECT
+                </span>
+
+                <h2>
+                    Entity Inspector
+                </h2>
+            </div>
+
+            <button
+                class="close-btn"
+                onclick="clearSelection()">
+                ×
+            </button>
+
+        </div>
+
+
+        <!-- EMPTY -->
+
+        <div id="emptyInspector">
+
+            <div class="empty-icon">
+                ◇
+            </div>
+
+            <p class="empty-title">
+                Nothing selected
+            </p>
+
+            <p class="empty-description">
+                Выберите сущность на графе,
+                чтобы просмотреть и изменить
+                её свойства.
+            </p>
+
+
+            <div class="stats">
+
+                <div class="stat-card">
+
+                    <strong id="statNodes">
+                        0
+                    </strong>
+
+                    <span>
+                        ENTITIES
+                    </span>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <strong id="statEdges">
+                        0
+                    </strong>
+
+                    <span>
+                        LINKS
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <button
+                class="full-btn"
+                onclick="openAddModal()">
+                ＋ Добавить сущность
+            </button>
+
+        </div>
+
+
+        <!-- ENTITY -->
+
+        <div
+            id="entityInspector"
+            style="display:none;">
+
+            <div class="entity-preview">
+
+                <div
+                    id="entityPreviewIcon"
+                    class="preview-icon">
+                    ?
+                </div>
+
+                <div>
+
+                    <strong id="previewName">
+                        Entity
+                    </strong>
+
+                    <span id="previewType">
+                        UNKNOWN
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Название
+                </label>
+
+                <input
+                    id="entityName"
+                    oninput="updateSelected('name', this.value)"
+                >
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Тип сущности
+                </label>
+
+                <select
+                    id="entityType"
+                    onchange="updateSelected('type', this.value)">
+
+                    <option value="person">
+                        👤 Person
+                    </option>
+
+                    <option value="company">
+                        ◼ Company
+                    </option>
+
+                    <option value="organization">
+                        ◇ Organization
+                    </option>
+
+                    <option value="tiktok">
+                        ♪ TikTok
+                    </option>
+
+                    <option value="telegram">
+                        ➤ Telegram
+                    </option>
+
+                    <option value="discord">
+                        ◌ Discord
+                    </option>
+
+                    <option value="email">
+                        @ Email
+                    </option>
+
+                    <option value="phone">
+                        ☎ Phone
+                    </option>
+
+                    <option value="location">
+                        ⌖ Location
+                    </option>
+
+                    <option value="date">
+                        ◷ Date
+                    </option>
+
+                    <option value="domain">
+                        ⌁ Domain
+                    </option>
+
+                    <option value="social">
+                        ◎ Social
+                    </option>
+
+                    <option value="document">
+                        ▤ Document
+                    </option>
+
+                    <option value="unknown">
+                        ? Unknown
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Источник / URL
+                </label>
+
+                <input
+                    id="entitySource"
+                    placeholder="https://..."
+                    oninput="updateSelected('source', this.value)"
+                >
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Значение
+                </label>
+
+                <input
+                    id="entityValue"
+                    placeholder="@username / email / номер / адрес..."
+                    oninput="updateSelected('value', this.value)"
+                >
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Заметка
+                </label>
+
+                <textarea
+                    id="entityNote"
+                    placeholder="Заметки исследователя..."
+                    oninput="updateSelected('note', this.value)"
+                ></textarea>
+
+            </div>
+
+
+            <button
+                class="delete-btn"
+                onclick="deleteSelected()">
+                Удалить сущность
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ==============================
+         ANALYSIS PANEL
+    ================================= -->
+
+    <div id="analysisPanel" class="orbit-panel analysis-panel">
+
+        <div class="orbit-panel-header">
+            <div>
+                <div class="orbit-panel-title">ANALYSIS</div>
+                <div class="orbit-panel-subtitle">INVESTIGATION OVERVIEW</div>
+            </div>
+
+            <button class="orbit-panel-close" onclick="toggleAnalysis()">×</button>
+        </div>
+
+        <div class="analysis-grid">
+            <div class="analysis-stat">
+                <span class="analysis-stat-label">ENTITIES</span>
+                <strong id="analysisNodes">0</strong>
+            </div>
+            <div class="analysis-stat">
+                <span class="analysis-stat-label">CONNECTIONS</span>
+                <strong id="analysisEdges">0</strong>
+            </div>
+            <div class="analysis-stat">
+                <span class="analysis-stat-label">LOCATIONS</span>
+                <strong id="analysisLocations">0</strong>
+            </div>
+            <div class="analysis-stat">
+                <span class="analysis-stat-label">ISOLATED</span>
+                <strong id="analysisIsolated">0</strong>
+            </div>
+        </div>
+
+        <div class="analysis-section">
+            <div class="analysis-section-title">MOST CONNECTED</div>
+            <div id="mostConnected" class="analysis-list">
+                <div class="analysis-empty">No data</div>
+            </div>
+        </div>
+
+        <div class="analysis-section">
+            <div class="analysis-section-title">SELECTED ENTITY</div>
+            <div id="selectedAnalysis" class="selected-analysis">
+                Выберите сущность на графе.
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ==============================
+         MAP PANEL
+    ================================= -->
+
+    <div id="mapPanel" class="orbit-panel world-map-panel">
+
+        <div class="orbit-panel-header">
+            <div>
+                <div class="orbit-panel-title">WORLD MAP</div>
+                <div class="orbit-panel-subtitle">GEOGRAPHIC INTELLIGENCE</div>
+            </div>
+
+            <button class="orbit-panel-close" onclick="toggleWorldMap()">×</button>
+        </div>
+
+        <div class="map-toolbar">
+            <button class="map-action" onclick="addMapMarker()">+ MARKER</button>
+            <button class="map-action" onclick="clearMapMarkers()">CLEAR</button>
+        </div>
+
+        <div id="orbitMap" class="orbit-map"></div>
+
+        <div class="map-footer">
+            Клик по карте добавляет точку. Маркеры работают локально в текущем расследовании.
+        </div>
+
+    </div>
+
+
+    <!-- ==============================
+         TEMP MAIL PANEL
+    ================================= -->
+
+    <div id="tempMailPanel" class="orbit-panel temp-mail-panel">
+
+        <div class="orbit-panel-header">
+            <div>
+                <div class="orbit-panel-title">TEMP MAIL</div>
+                <div class="orbit-panel-subtitle">TEMPORARY MAILBOX</div>
+            </div>
+
+            <button class="orbit-panel-close" onclick="toggleTempMail()">×</button>
+        </div>
+
+        <div class="mail-address">
+            <span id="tempMailAddress">temporary@temp-mail.io</span>
+            <button class="mini-btn" onclick="copyTempMail()">COPY</button>
+        </div>
+
+        <div class="mail-actions">
+            <button class="btn btn-secondary" onclick="generateTempMail()">Новый адрес</button>
+            <button class="btn btn-primary" onclick="refreshTempMail()">Обновить</button>
+        </div>
+
+        <div class="mail-inbox">
+            <div class="analysis-section-title">INBOX</div>
+            <div id="tempMailInbox" class="mail-empty">Входящих писем пока нет.</div>
+        </div>
+
+        <div class="mail-note">API здесь пока не подключается. Это только интерфейс временной почты.</div>
+
+    </div>
+
+
+    <!-- ==============================
+         TIMELINE PANEL
+    ================================= -->
+
+    <div id="timelinePanel" class="orbit-panel timeline-panel">
+
+        <div class="orbit-panel-header">
+            <div>
+                <div class="orbit-panel-title">TIMELINE</div>
+                <div class="orbit-panel-subtitle">INVESTIGATION EVENTS</div>
+            </div>
+
+            <button class="orbit-panel-close" onclick="toggleTimeline()">×</button>
+        </div>
+
+        <div class="timeline-toolbar">
+            <button class="map-action" onclick="promptTimelineEvent()">+ EVENT</button>
+        </div>
+
+        <div id="investigationTimeline" class="timeline-list">
+            <div class="timeline-empty">No events</div>
+        </div>
+
+    </div>
+
+    <!-- ==============================
+         THEME PANEL
+    ================================= -->
+
+    <div
+        id="themePanel"
+        class="theme-panel">
+
+        <div class="theme-title">
+            Цвет интерфейса
+        </div>
+
+        <div class="theme-subtitle">
+            Выберите accent color
+        </div>
+
+
+        <div class="colors">
+
+            <button
+                class="color"
+                style="--color:#7c5cff"
+                onclick="setTheme('#7c5cff')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#00d4ff"
+                onclick="setTheme('#00d4ff')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#00e6a0"
+                onclick="setTheme('#00e6a0')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#ff4fd8"
+                onclick="setTheme('#ff4fd8')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#ff8a3d"
+                onclick="setTheme('#ff8a3d')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#ff4567"
+                onclick="setTheme('#ff4567')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#e8ff3d"
+                onclick="setTheme('#e8ff3d')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#5b8cff"
+                onclick="setTheme('#5b8cff')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#b47cff"
+                onclick="setTheme('#b47cff')">
+            </button>
+
+            <button
+                class="color"
+                style="--color:#ffffff"
+                onclick="setTheme('#ffffff')">
+            </button>
+
+        </div>
+
+
+        <button
+            class="random-theme"
+            onclick="randomTheme()">
+            ✦ Random
+        </button>
+
+    </div>
+
+
+    <!-- ==============================
+         ADD MODAL
+    ================================= -->
+
+    <div
+        id="addModal"
+        class="modal">
+
+        <div class="modal-box">
+
+            <div class="modal-header">
+
+                <div>
+                    <span>
+                        CREATE OBJECT
+                    </span>
+
+                    <h2>
+                        Новая сущность
+                    </h2>
+                </div>
+
+                <button
+                    class="close-btn"
+                    onclick="closeAddModal()">
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Название
+                </label>
+
+                <input
+                    id="newName"
+                    placeholder="Например: John Doe"
+                >
+
+            </div>
+
+
+            <div class="form-section">
+
+                <label>
+                    Тип
+                </label>
+
+                <select id="newType">
+
+                    <option value="person">
+                        👤 Person
+                    </option>
+
+                    <option value="company">
+                        ◼ Company
+                    </option>
+
+                    <option value="organization">
+                        ◇ Organization
+                    </option>
+
+                    <option value="tiktok">
+                        ♪ TikTok
+                    </option>
+
+                    <option value="telegram">
+                        ➤ Telegram
+                    </option>
+
+                    <option value="discord">
+                        ◌ Discord
+                    </option>
+
+                    <option value="email">
+                        @ Email
+                    </option>
+
+                    <option value="phone">
+                        ☎ Phone
+                    </option>
+
+                    <option value="location">
+                        ⌖ Location
+                    </option>
+
+                    <option value="date">
+                        ◷ Date
+                    </option>
+
+                    <option value="domain">
+                        ⌁ Domain
+                    </option>
+
+                    <option value="social">
+                        ◎ Social
+                    </option>
+
+                    <option value="document">
+                        ▤ Document
+                    </option>
+
+                    <option value="unknown">
+                        ? Unknown
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="closeAddModal()">
+                    Отмена
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="createEntityFromModal()">
+                    Добавить
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="ca.js"></script>
+
+</body>
+</html>
+```
